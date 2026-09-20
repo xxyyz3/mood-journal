@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.log
+.env
+*.db
+*.sqlite3
+.idea/
+frontend/node_modules/
+frontend/dist/
