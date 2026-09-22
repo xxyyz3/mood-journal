@@ -1,0 +1,23 @@
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL"),
+    timeout=30.0,
+)
+def ask_deepseek(prompt:str):
+    response = client.chat.completions.create(
+        model=os.getenv("DEEPSEEK_MODEL"),
+        messages=[
+            {"role":"user",
+             "content":prompt,}
+        ])
+    return response.choices[0].message.content
+
+
+if __name__ == "__main__":
+    print(ask_deepseek("关注塔菲喵~"))

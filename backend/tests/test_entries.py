@@ -1,3 +1,6 @@
+from app.routers import entries
+
+
 def test_get_stats(client):
     response = client.get("/entries/stats")
 
@@ -92,3 +95,5 @@ def test_filter_by_mood(client):
     stats = stats_resp.json()
     assert stats["total"] > 0
     assert list(stats["by_mood"].keys()) == ["happy"]
+
+

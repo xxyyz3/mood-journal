@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from .routers import entries
+from .routers import entries, chat
 from .deps import create_db_and_tables
 
 load_dotenv()
@@ -21,6 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(entries.router)
+app.include_router(chat.router)
 create_db_and_tables()
 
 @app.get("/health")

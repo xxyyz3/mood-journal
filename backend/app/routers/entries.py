@@ -5,7 +5,6 @@ from .. import deps
 from ..models import MoodEntry
 from ..schemas import MoodEntryRead, MoodEntryCreate
 
-# print(MoodEntryRead, type(MoodEntryRead))
 
 router = APIRouter(prefix="/entries",tags=["entries"] )
 
