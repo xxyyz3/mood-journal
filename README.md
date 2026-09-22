@@ -31,7 +31,7 @@
 - 新增了表ChatMessage----用于存放对话记录
 - 新增了环境变量DEEPSEEK_API_KEY，DEEPSEEK_BASE_URL，DEEPSEEK_MODEL
 - 新增了测试test_chat，test_chat_history，test_timeout，测试里用monkeypeach替换真实数据模型调用
-
+- 新增了接口/entries/summary 和 依赖SummaryResponse
 
 ## 本地运行
 
