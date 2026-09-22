@@ -20,6 +20,18 @@
 | DELETE | /entries/{id} | 删除 |
 | GET | /entries/stats | 统计，按 mood 分组计数 |
 | GET | /health | 健康检查 |
+| POST | /chat  | AI对话   |
+| GET  | /chat/history | AI对话历史记录 |
+
+
+
+
+## 0.02 新增内容
+新增了接口post/get /chat------AI对话
+新增了表ChatMessage----用于存放对话记录
+新增了环境变量DEEPSEEK_API_KEY，DEEPSEEK_BASE_URL，DEEPSEEK_MODEL
+新增了测试test_chat，test_chat_history，test_timeout，测试里用monkeypeach替换真实数据模型调用
+
 
 ## 本地运行
 
