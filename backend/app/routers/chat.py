@@ -9,7 +9,6 @@ from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
 
 router = APIRouter(prefix="/chat",tags=["chat"])
 
-
 @router.post("", response_model=ChatResponse)
 def chat_with_deepseek(req: ChatRequest, session: Session = Depends(deps.get_session)):
     recent = session.exec(select(ChatMessage).order_by(ChatMessage.created_at.desc()).limit(10)).all()
