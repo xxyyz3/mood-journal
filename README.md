@@ -22,7 +22,7 @@
 | GET | /health | 健康检查 |
 | POST | /chat  | AI对话   |
 | GET  | /chat/history | AI对话历史记录 |
-
+| GET | /entries/summary | 用模型总结最近的心情记录 |
 
 
 
