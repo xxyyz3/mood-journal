@@ -66,7 +66,6 @@ def test_chat_uses_recent_history(monkeypatch, client):
         client.post("/chat", json={"message": f"hi_{i}"})
 
     msgs = captures["messages"]
-
     assert len(msgs)<=11
     contents = [m["content"] for m in msgs]
     assert "hi_0" not in contents

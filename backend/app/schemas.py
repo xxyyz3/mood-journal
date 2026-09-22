@@ -28,3 +28,6 @@ class ChatMessageRead(BaseModel):
     role: Literal["user", "assistant"]
     content: str
     created_at: datetime
+
+class SummaryResponse(BaseModel):
+    summary:str

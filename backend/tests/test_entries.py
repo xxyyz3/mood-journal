@@ -96,4 +96,53 @@ def test_filter_by_mood(client):
     assert stats["total"] > 0
     assert list(stats["by_mood"].keys()) == ["happy"]
 
+def test_entries_summary(monkeypatch,client):
+    captures = {}
+    def fake_fn(messages):
+        captures["messages"] = messages
+        return "fake reply"
+
+    monkeypatch.setattr(entries,"ask_deepseek_messages",fake_fn)
+
+    client.post("/entries", json={"mood":"happy","content":"早上好！！！"})
+    client.post("/entries", json={"mood":"angry","content":"呜呜呜 ！！！"})
+    response = client.get("/entries/summary")
+    assert response.status_code == 200
+    assert response.json()["summary"] == "fake reply"
+    msgs = captures["messages"]
+    assert len(msgs) == 1
+    assert msgs[0]["role"] == "user"
+    assert "happy" in msgs[0]["content"]
+    assert "angry" in msgs[0]["content"]
+
+
+def test_entries_summary_empty(monkeypatch,client):
+    def fail_fn(messages):
+        raise AssertionError("空数据时不该调用模型")
+
+    monkeypatch.setattr(entries, "ask_deepseek_messages", fail_fn)
+
+    response = client.get("/entries/summary")
+    data = response.json()
+    assert response.status_code == 200
+    assert data["summary"] == "还没有心情记录喵~"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
