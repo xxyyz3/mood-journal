@@ -19,5 +19,13 @@ def ask_deepseek(prompt:str):
     return response.choices[0].message.content
 
 
+def ask_deepseek_messages(messages: list[dict]) -> str:
+    response = client.chat.completions.create(
+        model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        messages=messages,
+    )
+    return response.choices[0].message.content
+
+
 if __name__ == "__main__":
     print(ask_deepseek("关注塔菲喵~"))
