@@ -12,4 +12,4 @@ class ChatMessage(SQLModel,table=True):
     role: str
     content:str
     created_at:datetime = Field(index=True,nullable=False,default_factory = lambda:datetime.now(timezone.utc))
-
+    session_id:str = Field(index=True)

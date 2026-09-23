@@ -37,8 +37,3 @@ def ask_deepseek_messages_stream(messages: list[dict]):
         if not message:
             continue
         yield message
-
-if __name__ == "__main__":
-    for piece in stream_deepseek_messages([{"role": "user", "content": "你好，请用1句话介绍你自己"}]):
-        print(piece, end="", flush=True)
-    print()

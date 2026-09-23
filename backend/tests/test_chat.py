@@ -1,6 +1,4 @@
 from openai import APITimeoutError
-from openai.types.live import ClientDelegation
-from pywin.debugger.debugger import HierStackRoot
 
 from app.routers import chat
 
@@ -9,7 +7,7 @@ def test_chat(monkeypatch,client):
         return f"fake reply for"
 
     monkeypatch.setattr(chat, "ask_deepseek_messages", fake_ask)
-    response = client.post("/chat", json={"message": "hi"})
+    response = client.post("/chat", json={"message": "hi", "session_id": "test-session"})
     assert response.status_code == 200
     data = response.json()
     assert data["reply"] == "fake reply for"
@@ -18,8 +16,8 @@ def test_chat(monkeypatch,client):
 def test_chat_history(monkeypatch,client):
     monkeypatch.setattr(chat,"ask_deepseek_messages",lambda p:"fake reply")
 
-    client.post("/chat", json={"message": "hi"})
-    response = client.get("/chat/history")
+    client.post("/chat", json={"message": "hi", "session_id": "test-session"})
+    response = client.get("/chat/history?session_id=test-session")
     assert response.status_code == 200
     data = response.json()
     assert data[0]["role"] == "user"
@@ -33,10 +31,12 @@ def test_timeout(monkeypatch,client):
         raise APITimeoutError("timeout")
 
     monkeypatch.setattr(chat,"ask_deepseek_messages",fake_timeout)
-    response = client.post("/chat", json={"message": "hi"})
+    response = client.post("/chat", json={"message": "hi", "session_id": "test-session"})
     assert response.status_code == 504
-    history = client.get("/chat/history").json()
-    assert history == []
+    history = client.get("/chat/history?session_id=test-session")
+
+    assert history.status_code == 200
+    assert history.json() == []
 
 def test_chat_include_history(monkeypatch,client):
     captures = {}
@@ -45,8 +45,8 @@ def test_chat_include_history(monkeypatch,client):
         return "fake reply"
 
     monkeypatch.setattr(chat,"ask_deepseek_messages",fake_fn)
-    client.post("/chat", json={"message": "first"})
-    client.post("/chat", json={"message": "second"})
+    client.post("/chat", json={"message": "first", "session_id": "test-session"})
+    client.post("/chat", json={"message": "second", "session_id": "test-session"})
     msgs = captures["messages"]
     assert len(msgs) == 3
     assert msgs[0]["role"] == "user"
@@ -65,7 +65,7 @@ def test_chat_uses_recent_history(monkeypatch, client):
     monkeypatch.setattr(chat,"ask_deepseek_messages",fake_fn)
 
     for i in range(15):
-        client.post("/chat", json={"message": f"hi_{i}"})
+        client.post("/chat", json={"message": f"hi_{i}", "session_id": "test-session"})
 
     msgs = captures["messages"]
     assert len(msgs)<=11
@@ -79,12 +79,12 @@ def test_chat_stream(monkeypatch,client):
             yield  i
     monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
 
-    response = client.post("/chat/stream", json={"message": "hi"})
+    response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
     assert response.status_code == 200
     data = "".join(response.iter_text())
     assert data == 'fake reply'
 
-    history = client.get("/chat/history")
+    history = client.get("/chat/history?session_id=test-session")
     assert history.status_code == 200
     data = history.json()
     assert data[0]["role"] == "user"
@@ -98,17 +98,35 @@ def test_chat_stream_timeout(monkeypatch,client):
         yield
     monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
 
-    response = client.post("/chat/stream", json={"message": "hi"})
+    response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
     assert "API响应超时" in response.text
 
-    history = client.get("/chat/history")
+    history = client.get("/chat/history?session_id=test-session")
     assert history.status_code == 200
     data = history.json()
     assert data == []
 
 
+def test_chat_sessions_isolated(monkeypatch,client):
+    def fake_fn(messages):
+        return f"reply to {messages[-1]['content']}"
 
+    monkeypatch.setattr(chat,"ask_deepseek_messages",fake_fn)
 
+    client.post("/chat", json={"message": "我是a", "session_id": "a"})
+    client.post("/chat", json={"message": "我是b", "session_id": "b"})
+
+    history_a = client.get("/chat/history?session_id=a")
+    history_b = client.get("/chat/history?session_id=b")
+    assert history_a.status_code == 200
+    assert history_b.status_code == 200
+
+    data_a = history_a.json()
+    data_b = history_b.json()
+    assert len(data_a) == 2
+    assert len(data_b) == 2
+    assert data_a[0]["content"] == "我是a"
+    assert data_b[0]["content"] == "我是b"
 
 
 

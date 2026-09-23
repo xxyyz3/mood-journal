@@ -14,6 +14,7 @@ class MoodEntryRead(MoodEntryCreate):
 
 class ChatRequest(BaseModel):
     message: str = "一句话介绍一下你自己"
+    session_id: str
 
 class ChatResponse(BaseModel):
     reply:str

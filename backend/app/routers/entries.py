@@ -59,7 +59,6 @@ async def read_stats(mood:str|None = None,session: Session = Depends(deps.get_se
     return {"total":total,"by_mood":by_mood}
 
 
-
 @router.post("",response_model=MoodEntryRead)
 async def create_entry(entry_in:MoodEntryCreate,session: Session = Depends(deps.get_session)):
     db_entry = MoodEntry(**entry_in.model_dump())
