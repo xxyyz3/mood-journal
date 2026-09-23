@@ -12,18 +12,18 @@
 
 ## 接口
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| POST | /entries | 新增心情记录 |
-| GET | /entries | 列表，可按 mood 过滤 |
-| GET | /entries/{id} | 详情 |
+| 方法     | 路径 | 说明 |
+|--------|---|---|
+| POST   | /entries | 新增心情记录 |
+| GET    | /entries | 列表，可按 mood 过滤 |
+| GET    | /entries/{id} | 详情 |
 | DELETE | /entries/{id} | 删除 |
-| GET | /entries/stats | 统计，按 mood 分组计数 |
-| GET | /health | 健康检查 |
-| POST | /chat  | AI对话   |
-| GET  | /chat/history | AI对话历史记录 |
-| GET | /entries/summary | 用模型总结最近的心情记录 |
-
+| GET    | /entries/stats | 统计，按 mood 分组计数 |
+| GET    | /health | 健康检查 |
+| POST   | /chat  | AI对话   |
+| GET    | /chat/history | AI对话历史记录 |
+| GET    | /entries/summary | 用模型总结最近的心情记录 |
+| GET    | /chat/stream   | 流式输出 |
 
 
 ## 0.02 新增内容
@@ -31,8 +31,10 @@
 - 新增了表ChatMessage----用于存放对话记录
 - 新增了环境变量DEEPSEEK_API_KEY，DEEPSEEK_BASE_URL，DEEPSEEK_MODEL
 - 新增了测试test_chat，test_chat_history，test_timeout，测试里用monkeypeach替换真实数据模型调用
-- 新增了接口/entries/summary 和 依赖SummaryResponse
-
+- 新增了接口entries/summary 和 依赖SummaryResponse
+- 新增了接口chat/stream
+- 新增了封装LLM函数ask_deepseek_messages_stream
+- 
 ## 本地运行
 
 ```bash
