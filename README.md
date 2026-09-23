@@ -39,6 +39,8 @@
 - 新增了测试test_chat_sessions_isolated，test_chat_stream_timeout
 - 新增了session_id字段在依赖ChatResponse中
 - 新增了提示词集中到 app/prompts.py，/chat 使用 system 消息定义角色
+- 新增了测试接口test_chat_stream_api_error
+- 修复了接口/chat/stream中捕获异常数据没有回滚的问题
 ## 本地运行
 
 ```bash
