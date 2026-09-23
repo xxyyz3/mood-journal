@@ -3,6 +3,8 @@
 一个心情记录系统的后端，提供增删查改和统计接口，部署在本机，
 通过 ngrok 暴露公网地址，支持前端跨域调用。
 
+# 技术栈
+
 **后端框架**
 - FastAPI：路由、依赖注入、`StreamingResponse`、中间件、异常处理
 - Pydantic：入参/出参校验，`Literal`、`Field`、`BaseModel`
