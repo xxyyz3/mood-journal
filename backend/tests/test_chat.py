@@ -48,12 +48,12 @@ def test_chat_include_history(monkeypatch,client):
     client.post("/chat", json={"message": "first", "session_id": "test-session"})
     client.post("/chat", json={"message": "second", "session_id": "test-session"})
     msgs = captures["messages"]
-    assert len(msgs) == 3
-    assert msgs[0]["role"] == "user"
-    assert msgs[0]["content"] == "first"
-    assert msgs[1]["role"] == "assistant"
-    assert msgs[2]["role"] == "user"
-    assert msgs[2]["content"] == "second"
+    assert len(msgs) == 4
+    assert msgs[1]["role"] == "user"
+    assert msgs[1]["content"] == "first"
+    assert msgs[2]["role"] == "assistant"
+    assert msgs[3]["role"] == "user"
+    assert msgs[3]["content"] == "second"
 
 
 def test_chat_uses_recent_history(monkeypatch, client):
@@ -68,7 +68,7 @@ def test_chat_uses_recent_history(monkeypatch, client):
         client.post("/chat", json={"message": f"hi_{i}", "session_id": "test-session"})
 
     msgs = captures["messages"]
-    assert len(msgs)<=11
+    assert len(msgs)<=12
     contents = [m["content"] for m in msgs]
     assert "hi_0" not in contents
 

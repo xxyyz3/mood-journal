@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from .. import deps
 from ..llm import ask_deepseek_messages, ask_deepseek_messages_stream
 from ..models import ChatMessage
+from ..prompts import CHAT_SYSTEM_PROMPT
 from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
 
 router = APIRouter(prefix="/chat",tags=["chat"])
@@ -18,8 +19,10 @@ def chat_with_deepseek(req: ChatRequest, session: Session = Depends(deps.get_ses
         order_by(ChatMessage.created_at.desc()).limit(10)
     ).all()
     history = list(reversed(recent))
-    messages = [{"role":m.role, "content":m.content} for m in history]
-    messages.append({"role":"user", "content":req.message})
+
+    messages = [{"role":"system", "content":CHAT_SYSTEM_PROMPT}]
+    messages += [{"role":m.role, "content":m.content} for m in history]
+    messages.append({"role": "user", "content": req.message})
     user_msg = ChatMessage(role = "user",content = req.message, session_id=req.session_id)
     session.add(user_msg)
 
@@ -56,7 +59,8 @@ def chat_stream(req: ChatRequest,session: Session = Depends(deps.get_session)):
     ).all()
 
     history = list(reversed(recent))
-    messages = [{"role": m.role, "content": m.content} for m in history]
+    messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}]
+    messages += [{"role": m.role, "content": m.content} for m in history]
     messages.append({"role": "user", "content": req.message})
     user_msg = ChatMessage(role="user", content=req.message, session_id=req.session_id)
     session.add(user_msg)

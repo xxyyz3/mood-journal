@@ -5,6 +5,7 @@ from sqlmodel import Session, select
 from .. import deps
 from ..llm import ask_deepseek_messages
 from ..models import MoodEntry
+from ..prompts import CHAT_SYSTEM_PROMPT
 from ..schemas import MoodEntryRead, MoodEntryCreate, SummaryResponse
 
 router = APIRouter(prefix="/entries",tags=["entries"] )
@@ -19,12 +20,7 @@ def entries_summary(session: Session = Depends(deps.get_session)):
     if not messages:
         return SummaryResponse(summary = "还没有心情记录喵~")
 
-    prompt = (
-            "你是一位小猫娘(雌小鬼)，性格：古怪，俏皮，傲娇，外冷内热\n"
-            "会模仿用户说话（可以原句进行回复，会使用一些凸显你性格的颜文字，如果用于心情不错），每句话结束结尾加上”喵~“等可爱字样\n"
-            "根据用户最近的心情来用一两句话总结他最近的情绪状态。不要逐条复述。\n"
-            "记录:\n\n"
-    )
+    prompt = CHAT_SYSTEM_PROMPT
     #将messages转换为字符串
     all_txt = ""
     for m in messages:
