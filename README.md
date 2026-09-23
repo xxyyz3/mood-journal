@@ -34,6 +34,10 @@
 - 新增了接口entries/summary 和 依赖SummaryResponse
 - 新增了接口chat/stream
 - 新增了封装LLM函数ask_deepseek_messages_stream
+- 更新了根目录/chat下的接口，支持多窗口会话
+- 更新了根目录/chat下的测试函数
+- 新增了测试test_chat_sessions_isolated，test_chat_stream_timeout
+- 新增了session_id字段在依赖ChatResponse中
 - 
 ## 本地运行
 
