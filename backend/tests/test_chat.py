@@ -1,4 +1,6 @@
-from openai import APITimeoutError
+from unittest.mock import MagicMock
+
+from openai import APITimeoutError, APIError, APIConnectionError
 
 from app.routers import chat
 
@@ -99,7 +101,24 @@ def test_chat_stream_timeout(monkeypatch,client):
     monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
 
     response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
-    assert "API响应超时" in response.text
+    content = "".join(response.iter_text())
+    assert "API响应超时" in content
+
+    history = client.get("/chat/history?session_id=test-session")
+    assert history.status_code == 200
+    data = history.json()
+    assert data == []
+
+def test_chat_stream_api_error(monkeypatch,client):
+    def fake_fn(messages):
+        raise APIConnectionError(request=MagicMock())
+        yield
+
+    monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
+
+    response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
+    content = "".join(response.iter_text())
+    assert "API错误" in content
 
     history = client.get("/chat/history?session_id=test-session")
     assert history.status_code == 200

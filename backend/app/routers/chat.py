@@ -73,9 +73,11 @@ def chat_stream(req: ChatRequest,session: Session = Depends(deps.get_session)):
                 full_reply += piece
                 yield piece
         except APITimeoutError:
+            session.rollback()
             yield "API响应超时"
             return
         except APIError:
+            session.rollback()
             yield "API错误"
             return
         ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=req.session_id)
