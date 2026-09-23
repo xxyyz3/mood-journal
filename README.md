@@ -24,24 +24,6 @@
 - 流式：`ask_deepseek_messages_stream`（`stream=True`）
 
 
-**测试**
-- pytest
-- `TestClient`
-- `monkeypatch` 替换外部调用
-- `conftest.py` + `dependency_overrides` 做测试隔离
-
-
-**部署**
-- nssm：把 uvicorn 注册成 Windows 服务，开机自启
-- ngrok：内网穿透，公网访问
-- 日志重定向到 `D:\logs\`，配自动切割
-- `pydantic-settings`（了解层面，尚未接入）
-
-
-**版本控制**
-- Git + GitHub
-- `git pull --rebase`、`git push`、分支管理
-
 ## 接口
 
 | 方法     | 路径 | 说明 |
@@ -73,6 +55,27 @@
 - 新增了提示词集中到 app/prompts.py，/chat 使用 system 消息定义角色
 - 新增了测试接口test_chat_stream_api_error
 - 修复了接口/chat/stream中捕获异常数据没有回滚的问题
+
+
+**测试**
+- pytest
+- `TestClient`
+- `monkeypatch` 替换外部调用
+- `conftest.py` + `dependency_overrides` 做测试隔离
+
+
+**部署**
+- nssm：把 uvicorn 注册成 Windows 服务，开机自启
+- ngrok：内网穿透，公网访问
+- 日志重定向到 `D:\logs\`，配自动切割
+- `pydantic-settings`（了解层面，尚未接入）
+
+
+**版本控制**
+- Git + GitHub
+- `git pull --rebase`、`git push`、分支管理
+
+
 ## 本地运行
 
 ```bash
