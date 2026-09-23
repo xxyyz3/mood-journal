@@ -3,7 +3,7 @@
 一个心情记录系统的后端，提供增删查改和统计接口，部署在本机，
 通过 ngrok 暴露公网地址，支持前端跨域调用。
 
-# 技术栈
+## 技术栈
 
 **后端框架**
 - FastAPI：路由、依赖注入、`StreamingResponse`、中间件、异常处理
@@ -11,9 +11,11 @@
 - SQLModel：数据模型，`table=True`、查询、`session.exec`、`session.get`
 - SQLAlchemy：底层 ORM，`select`、`order_by`、`where`、`limit`
 
+- 
 **数据库**
 - MySQL：生产数据存储
 - SQLite：测试时的临时库，通过 `tmp_path` 隔离
+
 
 **大模型**
 - DeepSeek API（OpenAI 兼容）
@@ -21,17 +23,20 @@
 - 单轮：`ask_deepseek_messages`
 - 流式：`ask_deepseek_messages_stream`（`stream=True`）
 
+
 **测试**
 - pytest
 - `TestClient`
 - `monkeypatch` 替换外部调用
 - `conftest.py` + `dependency_overrides` 做测试隔离
 
+
 **部署**
 - nssm：把 uvicorn 注册成 Windows 服务，开机自启
 - ngrok：内网穿透，公网访问
 - 日志重定向到 `D:\logs\`，配自动切割
 - `pydantic-settings`（了解层面，尚未接入）
+
 
 **版本控制**
 - Git + GitHub
