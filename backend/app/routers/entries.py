@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from .. import deps
 from ..llm import ask_deepseek_messages
 from ..models import MoodEntry
-from ..prompts import CHAT_SYSTEM_PROMPT
+from ..prompts import SUMMARY_SYSTEM_PROMPT
 from ..schemas import MoodEntryRead, MoodEntryCreate, SummaryResponse
 
 router = APIRouter(prefix="/entries",tags=["entries"] )
@@ -20,15 +20,14 @@ def entries_summary(session: Session = Depends(deps.get_session)):
     if not messages:
         return SummaryResponse(summary = "还没有心情记录喵~")
 
-    prompt = CHAT_SYSTEM_PROMPT
+    prompt = SUMMARY_SYSTEM_PROMPT
     #将messages转换为字符串
     all_txt = ""
     for m in messages:
         record_txt = f"{m.created_at.strftime('%Y-%m-%d')}  {m.mood}: {m.content}\n"
         all_txt += f"{record_txt}"
 
-    prompt+=all_txt
-    summary = [{"role":"user", "content":prompt}]
+    summary = [{"role":"user", "content":prompt},{"role":"user", "content":all_txt}]
     try:
         reply = ask_deepseek_messages(summary)
     except APITimeoutError:

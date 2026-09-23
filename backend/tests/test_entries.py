@@ -110,10 +110,10 @@ def test_entries_summary(monkeypatch,client):
     assert response.status_code == 200
     assert response.json()["summary"] == "fake reply"
     msgs = captures["messages"]
-    assert len(msgs) == 1
-    assert msgs[0]["role"] == "user"
-    assert "happy" in msgs[0]["content"]
-    assert "angry" in msgs[0]["content"]
+    assert len(msgs) == 2
+    assert msgs[1]["role"] == "user"
+    assert "happy" in msgs[1]["content"]
+    assert "angry" in msgs[1]["content"]
 
 
 def test_entries_summary_empty(monkeypatch,client):
