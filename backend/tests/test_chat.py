@@ -1,4 +1,6 @@
 from openai import APITimeoutError
+from openai.types.live import ClientDelegation
+from pywin.debugger.debugger import HierStackRoot
 
 from app.routers import chat
 
@@ -69,3 +71,53 @@ def test_chat_uses_recent_history(monkeypatch, client):
     assert len(msgs)<=11
     contents = [m["content"] for m in msgs]
     assert "hi_0" not in contents
+
+
+def test_chat_stream(monkeypatch,client):
+    def fake_fn(messages):
+        for i in "fake reply":
+            yield  i
+    monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
+
+    response = client.post("/chat/stream", json={"message": "hi"})
+    assert response.status_code == 200
+    data = "".join(response.iter_text())
+    assert data == 'fake reply'
+
+    history = client.get("/chat/history")
+    assert history.status_code == 200
+    data = history.json()
+    assert data[0]["role"] == "user"
+    assert data[1]["role"] == "assistant"
+    assert data[1]["content"] == "fake reply"
+
+
+def test_chat_stream_timeout(monkeypatch,client):
+    def fake_fn(messages):
+        raise APITimeoutError("timeout")
+        yield
+    monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
+
+    response = client.post("/chat/stream", json={"message": "hi"})
+    assert "API响应超时" in response.text
+
+    history = client.get("/chat/history")
+    assert history.status_code == 200
+    data = history.json()
+    assert data == []
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

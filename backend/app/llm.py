@@ -26,6 +26,19 @@ def ask_deepseek_messages(messages: list[dict]) -> str:
     )
     return response.choices[0].message.content
 
+def ask_deepseek_messages_stream(messages: list[dict]):
+    stream = client.chat.completions.create(
+        model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        messages=messages,
+        stream=True,
+    )
+    for chunk in stream:
+        message = chunk.choices[0].delta.content
+        if not message:
+            continue
+        yield message
 
 if __name__ == "__main__":
-    print(ask_deepseek("关注塔菲喵~"))
+    for piece in stream_deepseek_messages([{"role": "user", "content": "你好，请用1句话介绍你自己"}]):
+        print(piece, end="", flush=True)
+    print()

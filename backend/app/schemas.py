@@ -4,7 +4,6 @@ from pydantic import Field
 from pydantic import BaseModel
 from typing import Literal
 
-
 class MoodEntryCreate(SQLModel):
     mood:str = Field(max_length=20)
     content:str = Field(max_length=200)
@@ -31,3 +30,4 @@ class ChatMessageRead(BaseModel):
 
 class SummaryResponse(BaseModel):
     summary:str
+

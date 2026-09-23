@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from openai import APITimeoutError, APIError
 from sqlmodel import Session, select
+from fastapi.responses import StreamingResponse
 
 from .. import deps
-from ..llm import  ask_deepseek_messages
+from ..llm import ask_deepseek_messages, ask_deepseek_messages_stream
 from ..models import ChatMessage
 from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
 
@@ -39,6 +40,32 @@ def chat_history(session: Session = Depends(deps.get_session)):
     ).all()
 
 
+@router.post("/stream")
+def chat_stream(req: ChatRequest,session: Session = Depends(deps.get_session)):
+    recent = session.exec(select(ChatMessage).order_by(ChatMessage.created_at.desc()).limit(10)).all()
+    history = list(reversed(recent))
+    messages = [{"role": m.role, "content": m.content} for m in history]
+    messages.append({"role": "user", "content": req.message})
+    user_msg = ChatMessage(role="user", content=req.message)
+    session.add(user_msg)
+    def event_generator():
+        full_reply = ""
+        try:
+            for piece in ask_deepseek_messages_stream(messages):
+                if not piece:
+                    continue
+                full_reply += piece
+                yield piece
+        except APITimeoutError:
+            yield "API响应超时"
+            return
+        except APIError:
+            yield "API错误"
+            return
+        ai_msg = ChatMessage(role="assistant", content=full_reply)
+        session.add(ai_msg)
+        session.commit()
+    return StreamingResponse(event_generator(),media_type="text/event-stream")
 
 
 
