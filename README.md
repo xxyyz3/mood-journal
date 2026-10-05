@@ -78,6 +78,7 @@
 **Changed**
 - 更新 `/chat` 接口，支持多窗口会话
 - 更新 `/chat` 相关测试函数，使用 `monkeypatch` 替换真实模型调用
+- 重构 `/chat`和`/entries`接口，将service部分拆开放到了/services目录下
 
 **Fixed**
 - 修复 `/chat/stream` 中捕获异常后数据未回滚的问题
