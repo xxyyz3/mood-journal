@@ -1,47 +1,43 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from openai import APITimeoutError, APIError
 from sqlmodel import Session, select
 from fastapi.responses import StreamingResponse
 
 from .. import deps
+from ..deps import verify_token
 from ..llm import ask_deepseek_messages, ask_deepseek_messages_stream
 from ..models import ChatMessage
 from ..prompts import CHAT_SYSTEM_PROMPT
 from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
+from ..services.chat import handle_message, handle_message_stream
 
 router = APIRouter(prefix="/chat",tags=["chat"])
 
 @router.post("", response_model=ChatResponse)
-def chat_with_deepseek(req: ChatRequest, session: Session = Depends(deps.get_session)):
-    recent = session.exec(
-        select(ChatMessage).
-        where(ChatMessage.session_id == req.session_id).
-        order_by(ChatMessage.created_at.desc()).limit(10)
-    ).all()
-    history = list(reversed(recent))
-
-    messages = [{"role":"system", "content":CHAT_SYSTEM_PROMPT}]
-    messages += [{"role":m.role, "content":m.content} for m in history]
-    messages.append({"role": "user", "content": req.message})
-    user_msg = ChatMessage(role = "user",content = req.message, session_id=req.session_id)
-    session.add(user_msg)
-
+def chat_with_deepseek(
+        token: Annotated[str, Depends(verify_token)],
+        req: ChatRequest,
+        session: Session = Depends(deps.get_session),
+):
     try:
-        reply = ask_deepseek_messages(messages)
+        reply = handle_message(session, req.message, req.session_id)
     except APITimeoutError:
         session.rollback()
-        raise HTTPException(status_code=504,detail="响应超时，请稍后尝试")
+        raise HTTPException(status_code=504, detail="响应超时，请稍后尝试")
     except APIError as err:
         session.rollback()
-        raise HTTPException(status_code=502,detail=f"API调用失败: {err}")
-    ai_msg = ChatMessage(role = "assistant",content = reply, session_id=req.session_id)
-    session.add(ai_msg)
-    session.commit()
+        raise HTTPException(status_code=502, detail=f"API调用失败: {err}")
+
     return ChatResponse(reply=reply)
 
 
 @router.get("/history",response_model=list[ChatMessageRead])
-def chat_history(session_id:str,session: Session = Depends(deps.get_session)):
+def chat_history(
+        token: Annotated[str, Depends(verify_token)],
+        session_id:str,
+        session: Session = Depends(deps.get_session)
+):
     return session.exec(
         select(ChatMessage).
         where(ChatMessage.session_id == session_id).
@@ -50,39 +46,13 @@ def chat_history(session_id:str,session: Session = Depends(deps.get_session)):
 
 
 @router.post("/stream")
-def chat_stream(req: ChatRequest,session: Session = Depends(deps.get_session)):
-    recent = session.exec(
-        select(ChatMessage).
-        where(ChatMessage.session_id == req.session_id).
-        order_by(ChatMessage.created_at.desc()).
-        limit(10)
-    ).all()
-
-    history = list(reversed(recent))
-    messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}]
-    messages += [{"role": m.role, "content": m.content} for m in history]
-    messages.append({"role": "user", "content": req.message})
-    user_msg = ChatMessage(role="user", content=req.message, session_id=req.session_id)
-    session.add(user_msg)
+def chat_stream(
+        token: Annotated[str, Depends(verify_token)],
+        req: ChatRequest,
+        session: Session = Depends(deps.get_session)
+):
     def event_generator():
-        full_reply = ""
-        try:
-            for piece in ask_deepseek_messages_stream(messages):
-                if not piece:
-                    continue
-                full_reply += piece
-                yield piece
-        except APITimeoutError:
-            session.rollback()
-            yield "API响应超时"
-            return
-        except APIError:
-            session.rollback()
-            yield "API错误"
-            return
-        ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=req.session_id)
-        session.add(ai_msg)
-        session.commit()
+        yield from handle_message_stream(session, req.message, req.session_id)
     return StreamingResponse(event_generator(),media_type="text/event-stream")
 
 

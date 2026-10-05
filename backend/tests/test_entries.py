@@ -1,4 +1,4 @@
-from app.routers import entries
+from app.services import entries as entries_service
 
 
 def test_get_stats(client):
@@ -102,7 +102,7 @@ def test_entries_summary(monkeypatch,client):
         captures["messages"] = messages
         return "fake reply"
 
-    monkeypatch.setattr(entries,"ask_deepseek_messages",fake_fn)
+    monkeypatch.setattr(entries_service,"ask_deepseek_messages",fake_fn)
 
     client.post("/entries", json={"mood":"happy","content":"早上好！！！"})
     client.post("/entries", json={"mood":"angry","content":"呜呜呜 ！！！"})
@@ -120,7 +120,7 @@ def test_entries_summary_empty(monkeypatch,client):
     def fail_fn(messages):
         raise AssertionError("空数据时不该调用模型")
 
-    monkeypatch.setattr(entries, "ask_deepseek_messages", fail_fn)
+    monkeypatch.setattr(entries_service, "ask_deepseek_messages", fail_fn)
 
     response = client.get("/entries/summary")
     data = response.json()

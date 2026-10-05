@@ -6,6 +6,7 @@ class MoodEntry(SQLModel,table=True):
     mood:str
     content:str
     created_at:datetime = Field(index=True,nullable=False,default_factory = lambda:datetime.now(timezone.utc))
+    note: str | None = None
 
 class ChatMessage(SQLModel,table=True):
     id:int|None = Field(default=None,primary_key=True)

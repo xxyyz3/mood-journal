@@ -2,13 +2,13 @@ from unittest.mock import MagicMock
 
 from openai import APITimeoutError, APIError, APIConnectionError
 
-from app.routers import chat
+from app.services import chat as chat_service
 
 def test_chat(monkeypatch,client):
     def fake_ask(message):
         return f"fake reply for"
 
-    monkeypatch.setattr(chat, "ask_deepseek_messages", fake_ask)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages", fake_ask)
     response = client.post("/chat", json={"message": "hi", "session_id": "test-session"})
     assert response.status_code == 200
     data = response.json()
@@ -16,7 +16,7 @@ def test_chat(monkeypatch,client):
 
 
 def test_chat_history(monkeypatch,client):
-    monkeypatch.setattr(chat,"ask_deepseek_messages",lambda p:"fake reply")
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages", lambda p: "fake reply")
 
     client.post("/chat", json={"message": "hi", "session_id": "test-session"})
     response = client.get("/chat/history?session_id=test-session")
@@ -32,7 +32,7 @@ def test_timeout(monkeypatch,client):
     def fake_timeout(prompt):
         raise APITimeoutError("timeout")
 
-    monkeypatch.setattr(chat,"ask_deepseek_messages",fake_timeout)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages", fake_timeout)
     response = client.post("/chat", json={"message": "hi", "session_id": "test-session"})
     assert response.status_code == 504
     history = client.get("/chat/history?session_id=test-session")
@@ -46,7 +46,7 @@ def test_chat_include_history(monkeypatch,client):
         captures["messages"] = messages
         return "fake reply"
 
-    monkeypatch.setattr(chat,"ask_deepseek_messages",fake_fn)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages", fake_fn)
     client.post("/chat", json={"message": "first", "session_id": "test-session"})
     client.post("/chat", json={"message": "second", "session_id": "test-session"})
     msgs = captures["messages"]
@@ -64,7 +64,7 @@ def test_chat_uses_recent_history(monkeypatch, client):
         captures["messages"] = messages
         return "fake reply"
 
-    monkeypatch.setattr(chat,"ask_deepseek_messages",fake_fn)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages", fake_fn)
 
     for i in range(15):
         client.post("/chat", json={"message": f"hi_{i}", "session_id": "test-session"})
@@ -79,7 +79,7 @@ def test_chat_stream(monkeypatch,client):
     def fake_fn(messages):
         for i in "fake reply":
             yield  i
-    monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages_stream", fake_fn)
 
     response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
     assert response.status_code == 200
@@ -98,7 +98,7 @@ def test_chat_stream_timeout(monkeypatch,client):
     def fake_fn(messages):
         raise APITimeoutError("timeout")
         yield
-    monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages_stream", fake_fn)
 
     response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
     content = "".join(response.iter_text())
@@ -114,7 +114,7 @@ def test_chat_stream_api_error(monkeypatch,client):
         raise APIConnectionError(request=MagicMock())
         yield
 
-    monkeypatch.setattr(chat,"ask_deepseek_messages_stream",fake_fn)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages_stream", fake_fn)
 
     response = client.post("/chat/stream", json={"message": "hi", "session_id": "test-session"})
     content = "".join(response.iter_text())
@@ -130,7 +130,7 @@ def test_chat_sessions_isolated(monkeypatch,client):
     def fake_fn(messages):
         return f"reply to {messages[-1]['content']}"
 
-    monkeypatch.setattr(chat,"ask_deepseek_messages",fake_fn)
+    monkeypatch.setattr(chat_service, "ask_deepseek_messages", fake_fn)
 
     client.post("/chat", json={"message": "我是a", "session_id": "a"})
     client.post("/chat", json={"message": "我是b", "session_id": "b"})
@@ -148,6 +148,12 @@ def test_chat_sessions_isolated(monkeypatch,client):
     assert data_b[0]["content"] == "我是b"
 
 
+def test_chat_require_token():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    raw_client = TestClient(app)
+    response = raw_client.post("/chat", json={"session_id": "x", "message": "hi"})
+    assert response.status_code == 401
 
 
 

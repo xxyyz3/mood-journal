@@ -24,6 +24,7 @@ app.include_router(entries.router)
 app.include_router(chat.router)
 create_db_and_tables()
 
+
 @app.get("/health")
 async def root():
     return {"status": "ok"}
