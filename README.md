@@ -21,6 +21,19 @@
 - 单轮：`ask_deepseek_messages`
 - 流式：`ask_deepseek_messages_stream`（`stream=True`）
 
+## 数据库迁移
+
+首次部署前初始化数据库表：
+alembic upgrade head
+
+修改 models 后：
+alembic revision --autogenerate -m "描述"
+# 打开生成的脚本检查
+alembic upgrade head
+
+回滚：
+alembic downgrade -1
+
 **测试**
 - pytest
 - `TestClient`
@@ -38,6 +51,8 @@
 - `git pull --rebase`、`git push`、分支管理
 
 ## 接口
+除 /health 和 /docs 外，所有接口都需要在请求头带：
+Authorization: Bearer <API_TOKEN>
 
 **Entries**
 | 方法 | 路径 | 说明 |
@@ -71,7 +86,7 @@
 - 新增环境变量 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`
 - 新增接口 `GET /entries/summary` 及依赖 `SummaryResponse`
 - 新增封装函数 `ask_deepseek_messages_stream`
-- 新增 `session_id` 字段到 `ChatResponse`
+- 新增 `session_id` 字段到 `ChatMessage`表，`ChatRequest`入参
 - 新增 `app/prompts.py`，`/chat` 使用 system 消息定义角色
 - 新增测试：`test_chat`、`test_chat_history`、`test_timeout`、`test_chat_sessions_isolated`、`test_chat_stream_timeout`、`test_chat_stream_api_error`
 
@@ -91,11 +106,32 @@ cp .env.example .env  # 按需修改 DATABASE_URL、CORS_ORIGINS
 uvicorn app.main:app --reload
 ```
 
-跑测试：
+.env 里需要配置的变量：
+- DATABASE_URL：MySQL 连接串
+- CORS_ORIGINS：允许的前端来源，逗号分隔
+- DB_ECHO：是否打印 SQL，开发时 true，生产 false
+- API_TOKEN：接口鉴权用的 token
+- DEEPSEEK_API_KEY：DeepSeek API key
+- DEEPSEEK_BASE_URL：https://api.deepseek.com
+- DEEPSEEK_MODEL：deepseek-chat
 
+跑测试：
+测试使用SQLite，不污染数据源
 ```bash
 pytest
 ```
-
+## 目录结构
+backend/
+  app/
+    routers/
+    services/
+    models.py
+    schemas.py
+    deps.py
+    llm.py
+    prompts.py
+    main.py
+  tests/
+  alembic/
 ---
 
