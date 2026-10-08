@@ -1,12 +1,8 @@
-from fastapi import Depends
 from openai import APITimeoutError, APIError
 from sqlmodel import Session, select
-
 from app.llm import ask_deepseek_messages
-from app import deps
 from app.models import MoodEntry
 from app.prompts import SUMMARY_SYSTEM_PROMPT
-from app.schemas import SummaryResponse
 
 
 def messages_histories(

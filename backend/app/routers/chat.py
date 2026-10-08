@@ -6,9 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from .. import deps
 from ..deps import verify_token
-from ..llm import ask_deepseek_messages, ask_deepseek_messages_stream
 from ..models import ChatMessage
-from ..prompts import CHAT_SYSTEM_PROMPT
 from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
 from ..services.chat import handle_message, handle_message_stream
 
