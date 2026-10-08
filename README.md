@@ -1,7 +1,5 @@
 # Mood Journal Backend
 
-> 状态：可运行，已部署，支持鉴权、迁移、测试。
-
 一个心情记录系统的后端，提供增删查改和统计接口，部署在本机，通过 ngrok 暴露公网地址，支持前端跨域调用。
 
 
@@ -9,19 +7,19 @@
 
 **后端框架**
 - FastAPI：路由、依赖注入、`StreamingResponse`、中间件、异常处理
-  - Pydantic：入参/出参校验，`Literal`、`Field`、`BaseModel`
-  - SQLModel：数据模型，`table=True`、查询、`session.exec`、`session.get`
-  - SQLAlchemy：底层 ORM，`select`、`order_by`、`where`、`limit`
+- Pydantic：入参/出参校验，`Literal`、`Field`、`BaseModel`
+- SQLModel：数据模型，`table=True`、查询、`session.exec`、`session.get`
+- SQLAlchemy：底层 ORM，`select`、`order_by`、`where`、`limit`
 
 **数据库**
 - MySQL：生产数据存储
-  - SQLite：测试时的临时库，通过 `tmp_path` 隔离
+- SQLite：测试时的临时库，通过 `tmp_path` 隔离
 
 **大模型**
 - DeepSeek API（OpenAI 兼容）
-  - `openai` Python 包，`chat.completions.create`
-  - 单轮：`ask_deepseek_messages`
-  - 流式：`ask_deepseek_messages_stream`（`stream=True`）
+- `openai` Python 包，`chat.completions.create`
+- 单轮：`ask_deepseek_messages`
+- 流式：`ask_deepseek_messages_stream`（`stream=True`）
 
 ## 数据库迁移
 
@@ -38,22 +36,19 @@ alembic downgrade -1
 
 **测试**
 - pytest
-  - `TestClient`
-  - `monkeypatch` 替换外部调用
-  - `conftest.py` + `dependency_overrides` 做测试隔离
+- `TestClient`
+- `monkeypatch` 替换外部调用
+- `conftest.py` + `dependency_overrides` 做测试隔离
 
 **部署**
-### nssm 注册服务
-- nssm install MoodBackend "D:\MYAPP\.venv\Scripts\python.exe" "-m uvicorn app.main:app --host 0.0.0.0 --port 8000"
-  - nssm set MoodBackend AppDirectory "D:\...\backend"
-  - nssm start MoodBackend
-
-### ngrok 暴露公网
-- ngrok http 8000 --url=https://your-domain.ngrok-free.dev
+- nssm：把 uvicorn 注册成 Windows 服务，开机自启
+- ngrok：内网穿透，公网访问
+- 日志重定向到 `D:\logs\`，配自动切割
+- `pydantic-settings`（了解层面，尚未接入）
 
 **版本控制**
 - Git + GitHub
-  - `git pull --rebase`、`git push`、分支管理
+- `git pull --rebase`、`git push`、分支管理
 
 ## 接口
 除 /health 和 /docs 外，所有接口都需要在请求头带：
@@ -74,7 +69,12 @@ Authorization: Bearer <API_TOKEN>
 |---|---|---|
 | POST | /chat | AI 对话 |
 | GET | /chat/history | AI 对话历史记录 |
-| POST | /chat/stream | 流式输出 |
+| GET | /chat/stream | 流式输出 |
+
+**Chat**
+| 方法 | 路径 | 说明 |
+| POST | /ask | 基于角色档案的 RAG 问答 |
+
 
 **Health**
 | 方法 | 路径 | 说明 |
@@ -87,18 +87,25 @@ Authorization: Bearer <API_TOKEN>
 
 **Added**
 - 新增接口 `POST /chat`、`GET /chat/history`、`GET /chat/stream`
-  - 新增表 `ChatMessage`，用于存放对话记录
-  - 新增环境变量 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`
-  - 新增接口 `GET /entries/summary` 及依赖 `SummaryResponse`
-  - 新增封装函数 `ask_deepseek_messages_stream`
-  - 新增 `session_id` 字段到 `ChatMessage`表，`ChatRequest`入参
-  - 新增 `app/prompts.py`，`/chat` 使用 system 消息定义角色
-  - 新增测试：`test_chat`、`test_chat_history`、`test_timeout`、`test_chat_sessions_isolated`、`test_chat_stream_timeout`、`test_chat_stream_api_error`
+- 新增表 `ChatMessage`，用于存放对话记录
+- 新增环境变量 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`
+- 新增接口 `GET /entries/summary` 及依赖 `SummaryResponse`
+- 新增封装函数 `ask_deepseek_messages_stream`
+- 新增 `session_id` 字段到 `ChatMessage`表，`ChatRequest`入参
+- 新增 `app/prompts.py`，`/chat` 使用 system 消息定义角色
+- 新增测试：`test_chat`、`test_chat_history`、`test_timeout`、`test_chat_sessions_isolated`、`test_chat_stream_timeout`、`test_chat_stream_api_error`
+- 新增 `ask` 接口：
+- 数据源：`app/data/character.md`，切分后存入 `app/data/chunks.json`
+
+ 
 
 **Changed**
 - 更新 `/chat` 接口，支持多窗口会话
-  - 更新 `/chat` 相关测试函数，使用 `monkeypatch` 替换真实模型调用
-  - 重构 `/chat`和`/entries`接口，将service部分拆开放到了/services目录下
+- 更新 `/chat` 相关测试函数，使用 `monkeypatch` 替换真实模型调用
+- 重构 `/chat`和`/entries`接口，将service部分拆开放到了/services目录下
+- 检索：`jieba 分词 + 命中率 >= 0.6`
+- 无相关内容时不调模型，直接返回固定文案
+
 
 **Fixed**
 - 修复 `/chat/stream` 中捕获异常后数据未回滚的问题
@@ -113,19 +120,18 @@ uvicorn app.main:app --reload
 
 .env 里需要配置的变量：
 - DATABASE_URL：MySQL 连接串
-  - CORS_ORIGINS：允许的前端来源，逗号分隔
-  - DB_ECHO：是否打印 SQL，开发时 true，生产 false
-  - API_TOKEN：接口鉴权用的 token
-  - DEEPSEEK_API_KEY：DeepSeek API key
-  - DEEPSEEK_BASE_URL：https://api.deepseek.com
-  - DEEPSEEK_MODEL：deepseek-chat
+- CORS_ORIGINS：允许的前端来源，逗号分隔
+- DB_ECHO：是否打印 SQL，开发时 true，生产 false
+- API_TOKEN：接口鉴权用的 token
+- DEEPSEEK_API_KEY：DeepSeek API key
+- DEEPSEEK_BASE_URL：https://api.deepseek.com
+- DEEPSEEK_MODEL：deepseek-chat
 
 跑测试：
-每个测试用独立的临时 SQLite（tmp_path），测试结束自动销毁。不连真实 MySQL。
+测试使用SQLite，不污染数据源
 ```bash
 pytest
 ```
-
 ## 目录结构
 ```
 backend/
@@ -140,7 +146,5 @@ backend/
     main.py
   tests/
   alembic/
-    versions/
 ```
-
 
