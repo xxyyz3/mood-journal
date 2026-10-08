@@ -1,8 +1,7 @@
 from unittest.mock import MagicMock
+from openai import APITimeoutError,APIConnectionError
+from app.services import service_chat as chat_service
 
-from openai import APITimeoutError, APIError, APIConnectionError
-
-from app.services import chat as chat_service
 
 def test_chat(monkeypatch,client):
     def fake_ask(message):
@@ -154,9 +153,6 @@ def test_chat_require_token():
     raw_client = TestClient(app)
     response = raw_client.post("/chat", json={"session_id": "x", "message": "hi"})
     assert response.status_code == 401
-
-
-
 
 
 

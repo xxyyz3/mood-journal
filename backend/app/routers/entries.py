@@ -7,7 +7,7 @@ from .. import deps
 from ..deps import verify_token
 from ..models import MoodEntry
 from ..schemas import MoodEntryRead, MoodEntryCreate, SummaryResponse
-from ..services.entries import handle_messages, handle_messages_summary
+from ..services.service_entries import handle_messages, handle_messages_summary
 
 router = APIRouter(prefix="/entries",tags=["entries"] )
 

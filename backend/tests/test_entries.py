@@ -1,5 +1,4 @@
-from app.services import entries as entries_service
-
+from app.services import service_entries as entries_service
 
 def test_get_stats(client):
     response = client.get("/entries/stats")

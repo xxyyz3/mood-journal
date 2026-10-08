@@ -6,6 +6,7 @@ from app.models import ChatMessage
 from app.prompts import CHAT_SYSTEM_PROMPT
 from ..llm import ask_deepseek_messages, ask_deepseek_messages_stream
 
+
 def messages_histories(session:Session, session_id:str):
     recent = session.exec(
         select(ChatMessage).
@@ -66,3 +67,5 @@ def handle_message_stream(session:Session, user_message:str,session_id:str):
     ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id)
     session.add(ai_msg)
     session.commit()
+
+

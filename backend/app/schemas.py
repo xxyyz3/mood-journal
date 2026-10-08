@@ -32,3 +32,8 @@ class ChatMessageRead(BaseModel):
 class SummaryResponse(BaseModel):
     summary:str
 
+class AskResponse(BaseModel):
+    answer:str
+
+class AskRequest(BaseModel):
+    question:str

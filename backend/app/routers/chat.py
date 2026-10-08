@@ -8,7 +8,8 @@ from .. import deps
 from ..deps import verify_token
 from ..models import ChatMessage
 from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
-from ..services.chat import handle_message, handle_message_stream
+from ..services.service_chat import handle_message, handle_message_stream
+
 
 router = APIRouter(prefix="/chat",tags=["chat"])
 
@@ -52,6 +53,7 @@ def chat_stream(
     def event_generator():
         yield from handle_message_stream(session, req.message, req.session_id)
     return StreamingResponse(event_generator(),media_type="text/event-stream")
+
 
 
 
