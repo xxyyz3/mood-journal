@@ -71,8 +71,9 @@ Authorization: Bearer <API_TOKEN>
 | GET | /chat/history | AI 对话历史记录 |
 | GET | /chat/stream | 流式输出 |
 
-**Chat**
+**Rag**
 | 方法 | 路径 | 说明 |
+|---|---|---|
 | POST | /ask | 基于角色档案的 RAG 问答 |
 
 
