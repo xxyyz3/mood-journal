@@ -11,7 +11,7 @@ router = APIRouter(prefix="/ask",tags=["ask"])
 
 @router.post("")
 def about_her(
-    token: Annotated[str, Depends(verify_token)],
+    # token: Annotated[str, Depends(verify_token)],
     req:AskRequest,
 ):
     try:
@@ -20,5 +20,5 @@ def about_her(
         raise HTTPException(status_code=504, detail="响应超时")
     except APIError as err:
         raise HTTPException(status_code=502, detail=f"API调用失败: {err}")
-    return AskResponse(answer = answer)
+    return AskResponse(answer = answer["answer"],sources = answer["sources"])
 

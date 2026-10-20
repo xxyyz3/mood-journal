@@ -34,6 +34,7 @@ class SummaryResponse(BaseModel):
 
 class AskResponse(BaseModel):
     answer:str
+    sources:list[str]
 
 class AskRequest(BaseModel):
     question:str

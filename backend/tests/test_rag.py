@@ -11,7 +11,9 @@ def test_ask_answer(monkeypatch, client):
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] == "这是该模型的内容"
-
+    assert "sources" in data
+    assert isinstance(data["sources"], list)
+    assert len(data["sources"]) > 0
 
 def test_ask_no__answer(monkeypatch, client):
     def fake_fn(prompt:str):
@@ -21,3 +23,4 @@ def test_ask_no__answer(monkeypatch, client):
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] == "文档中没有相关内容"
+    assert data["sources"] == []
