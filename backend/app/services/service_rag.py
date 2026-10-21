@@ -56,12 +56,12 @@ def search(question: str, top_k: int = 3) -> list[dict]:
     scored = []
     for i, c in enumerate(chunks):
         score = cosine_similarity(q_embedding, chunk_embeddings[i])
+        if score<=0.4:
+            continue
         scored.append((score, c))
 
-    # 按分数降序
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    # 这次你可以看看最高分是多少
     for s, c in scored[:top_k]:
         print(f"score: {s:.4f}, title: {c.split('\n')[0]}")
 
@@ -83,6 +83,7 @@ def ask(question: str, session:Session, session_id:str) -> dict:
         session.add(ai_msg)
         session.commit()
         return {"answer":"文档中没有相关内容","sources":[]}
+
     title = [item["title"] for item in matched]
     context = "\n---\n".join(item["content"] for item in matched)
     prompt = (

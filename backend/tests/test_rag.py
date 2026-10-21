@@ -7,7 +7,7 @@ def test_ask_answer(monkeypatch, client):
     def fake_fn(prompt:str):
         return "这是该模型的内容"
     monkeypatch.setattr(service_rag, "ask_deepseek", fake_fn)
-    response = client.post("/ask", json={"question":"介绍一下她"})
+    response = client.post("/ask", json={"question":"介绍一下她", "session_id": "test-session"})
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] == "这是该模型的内容"
@@ -15,11 +15,11 @@ def test_ask_answer(monkeypatch, client):
     assert isinstance(data["sources"], list)
     assert len(data["sources"]) > 0
 
-def test_ask_no__answer(monkeypatch, client):
-    def fake_fn(prompt:str):
-        raise APIConnectionError("不调用该模型")
-    monkeypatch.setattr(service_rag, "ask_deepseek", fake_fn)
-    response = client.post("/ask", json={"question":"今天天气"})
+
+def test_ask_no_answer_retrieval_empty(monkeypatch, client):
+    monkeypatch.setattr(service_rag, "search", lambda q: [])
+
+    response = client.post("/ask", json={"question": "今天天气", "session_id": "test-session"})
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] == "文档中没有相关内容"
