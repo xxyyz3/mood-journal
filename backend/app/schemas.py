@@ -38,3 +38,4 @@ class AskResponse(BaseModel):
 
 class AskRequest(BaseModel):
     question:str
+    session_id:str

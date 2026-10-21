@@ -1,9 +1,8 @@
-from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException
 from openai import APIError, APITimeoutError
+from sqlmodel import Session
 
-from ..deps import verify_token
+from .. import deps
 from ..schemas import AskRequest, AskResponse
 from ..services.service_rag  import ask
 
@@ -13,9 +12,10 @@ router = APIRouter(prefix="/ask",tags=["ask"])
 def about_her(
     # token: Annotated[str, Depends(verify_token)],
     req:AskRequest,
+    session:Session = Depends(deps.get_session),
 ):
     try:
-        answer = ask(req.question)
+        answer = ask(req.question, session, req.session_id)
     except APITimeoutError:
         raise HTTPException(status_code=504, detail="响应超时")
     except APIError as err:
