@@ -2,7 +2,9 @@ import json
 import sys
 from pathlib import Path
 from sqlmodel import Session, select
+import chromadb
 
+from app.llm import ask_deepseek
 from app.models import ChatMessage
 from app.siliconflow_llm import get_embedding, cosine_similarity
 
@@ -13,16 +15,28 @@ chunks = json.loads(
     (BASE_DIR / "app" / "data" / "chunks.json").read_text(encoding="utf-8")
 )
 
-print("正在生成文档向量...")
-chunk_embeddings = [get_embedding(c) for c in chunks]
-print("向量生成完毕。")
-
-from app.llm import ask_deepseek
+client = chromadb.PersistentClient(path="./chroma_db")
+collection = client.get_or_create_collection(name="character_knowledge_base")
 
 def extract_title(passage:str):
     first_title = passage.split("\n",1)[0].strip()
     return first_title
 
+if collection.count() == 0:
+    print("首次启动，正在生成文档向量并存入 ChromaDB...")
+    chunk_embeddings = [get_embedding(c) for c in chunks]
+    ids = [f"chunk_{i}" for i in range(len(chunks))]
+    metadatas =  [{"title": extract_title(c)} for c in chunks]
+
+    collection.add(
+        documents=chunks,
+        embeddings=chunk_embeddings,
+        metadatas=metadatas,
+        ids=ids
+    )
+    print("入库完毕！")
+else:
+    print(f"已有 {collection.count()} 条数据，无需重新生成。")
 
 def get_recent_question(session:Session, session_id:str,limit:int=3):
     recent = session.exec(
@@ -53,22 +67,21 @@ def rewrite_question(question:str, session:Session, session_id:str):
 
 def search(question: str, top_k: int = 3) -> list[dict]:
     q_embedding = get_embedding(question)
-    scored = []
-    for i, c in enumerate(chunks):
-        score = cosine_similarity(q_embedding, chunk_embeddings[i])
-        if score<=0.4:
-            continue
-        scored.append((score, c))
 
-    scored.sort(key=lambda x: x[0], reverse=True)
+    results = collection.query(
+        query_embeddings=[q_embedding],
+        n_results=top_k
+    )
 
-    for s, c in scored[:top_k]:
-        print(f"score: {s:.4f}, title: {c.split('\n')[0]}")
+    matched = []
 
-    return [
-        {"title": extract_title(c), "content": c}
-        for _, c in scored[:top_k]
-    ]
+    if results["documents"] and results["documents"][0]:
+        for i in range(len(results["documents"])):
+            content = results["documents"][0][i]
+            title = results["metadatas"][0][i]["title"]
+            matched.append({"title":title,"content":content})
+
+    return matched
 
 
 def ask(question: str, session:Session, session_id:str) -> dict:
@@ -86,6 +99,7 @@ def ask(question: str, session:Session, session_id:str) -> dict:
 
     title = [item["title"] for item in matched]
     context = "\n---\n".join(item["content"] for item in matched)
+
     prompt = (
         "你只能根据下面的资料回答问题。"
         "不要扩写，不要联想，不要使用你自己的知识。\n\n"

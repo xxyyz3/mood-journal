@@ -9,3 +9,4 @@ __pycache__/
 .idea/
 frontend/node_modules/
 frontend/dist/
+chroma_db/
