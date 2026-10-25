@@ -35,14 +35,16 @@ def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
     return dot_product / (norm_a * norm_b)
 
 if __name__ == "__main__":
-    question = "她住在哪里"
-    chunk_address = "## 住址 现住址：星咲学园附近学生公寓「メゾン・ド・猫尾」302 号室"
-    chunk_chat = "## 说话示例 大哥哥说今天好累"
-
-    print("正在获取向量...")
-    v_q = get_embedding(question)
-    v_address = get_embedding(chunk_address)
-    v_chat = get_embedding(chunk_chat)
-
-    print(f"问题 和 住址块 的相似度: {cosine_similarity(v_q, v_address):.4f}")
-    print(f"问题 和 说话示例块 的相似度: {cosine_similarity(v_q, v_chat):.4f}")
+    q = get_embedding("她住在哪里")
+    print(q)
+    # question = "她住在哪里"
+    # chunk_address = "## 住址 现住址：星咲学园附近学生公寓「メゾン・ド・猫尾」302 号室"
+    # chunk_chat = "## 说话示例 大哥哥说今天好累"
+    #
+    # print("正在获取向量...")
+    # v_q = get_embedding(question)
+    # v_address = get_embedding(chunk_address)
+    # v_chat = get_embedding(chunk_chat)
+    #
+    # print(f"问题 和 住址块 的相似度: {cosine_similarity(v_q, v_address):.4f}")
+    # print(f"问题 和 说话示例块 的相似度: {cosine_similarity(v_q, v_chat):.4f}")

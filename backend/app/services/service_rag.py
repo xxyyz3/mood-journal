@@ -4,9 +4,9 @@ from pathlib import Path
 from sqlmodel import Session, select
 import chromadb
 
-from app.llm import ask_deepseek
+from app.llm import ask_deepseek, ask_deepseek_messages_stream
 from app.models import ChatMessage
-from app.siliconflow_llm import get_embedding, cosine_similarity
+from app.siliconflow_llm import get_embedding
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
@@ -114,3 +114,51 @@ def ask(question: str, session:Session, session_id:str) -> dict:
     session.commit()
 
     return {"answer": reply,'sources':title}
+
+
+
+def ask_stream(question: str, session:Session, session_id:str):
+
+    new_question = rewrite_question(question, session, session_id)
+    matched = search(new_question)
+    if not matched:
+        yield "文档中没有相关内容"
+        return
+
+    context = "\n---\n".join(item["content"] for item in matched)
+
+    prompt = (
+        "你只能根据下面的资料回答问题。"
+        "不要扩写，不要联想，不要使用你自己的知识。\n\n"
+        f"资料：\n{context}\n\n"
+        f"问题：{question}"
+    )
+    message = [{"role":"user","content":prompt}]
+
+    full_reply = ""
+    for chunk in ask_deepseek_messages_stream(message):
+        full_reply += chunk
+        yield chunk
+
+    user_msg = ChatMessage(role="user", content=question, session_id=session_id)
+    ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id)
+    session.add(user_msg)
+    session.add(ai_msg)
+    session.commit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
