@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from sqlmodel import Session, select
 import chromadb
+import requests
+import os
 
 from app.llm import ask_deepseek, ask_deepseek_messages_stream
 from app.models import ChatMessage
@@ -65,7 +67,7 @@ def rewrite_question(question:str, session:Session, session_id:str):
     return new_question
 
 
-def search(question: str, top_k: int = 3) -> list[dict]:
+def search(question: str, top_k: int = 5) -> list[dict]:
     q_embedding = get_embedding(question)
 
     results = collection.query(
@@ -82,6 +84,42 @@ def search(question: str, top_k: int = 3) -> list[dict]:
             matched.append({"title":title,"content":content})
 
     return matched
+
+
+def rerank(question, content_list):
+    if not content_list:
+        return []
+
+    url = "https://api.siliconflow.cn/v1/rerank"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('SILICONFLOW_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "BAAI/bge-reranker-v2-m3",
+        "query": question,
+        "documents": content_list
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Rerank 接口报错: {response.text}")
+        return [{"content": c, "score": 0} for c in content_list[:3]]
+
+    results = response.json()
+
+    reranked_docs = []
+    for item in results["results"]:
+        original_index = item["index"]
+        score = item["relevance_score"]
+        reranked_docs.append({
+            "content": content_list[original_index],
+            "score": score
+        })
+
+    return reranked_docs[:3]
 
 
 def ask(question: str, session:Session, session_id:str) -> dict:
@@ -124,8 +162,9 @@ def ask_stream(question: str, session:Session, session_id:str):
     if not matched:
         yield "文档中没有相关内容"
         return
-
-    context = "\n---\n".join(item["content"] for item in matched)
+    content = [c["content"] for c in matched]
+    docs = rerank(new_question, content)
+    context = "\n---\n".join(item["content"] for item in docs)
 
     prompt = (
         "你只能根据下面的资料回答问题。"
