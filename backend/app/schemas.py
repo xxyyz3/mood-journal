@@ -37,5 +37,6 @@ class AskResponse(BaseModel):
     sources:list[str]
 
 class AskRequest(BaseModel):
+    user_id:str
     question:str
     session_id:str

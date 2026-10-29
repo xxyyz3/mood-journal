@@ -1,13 +1,15 @@
 import json
 import sys
 from pathlib import Path
+
+from fastapi import BackgroundTasks
 from sqlmodel import Session, select
 import chromadb
 import requests
 import os
 
 from app.llm import ask_deepseek, ask_deepseek_messages_stream
-from app.models import ChatMessage
+from app.models import ChatMessage, UserMemory
 from app.siliconflow_llm import get_embedding
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -19,6 +21,7 @@ chunks = json.loads(
 
 client = chromadb.PersistentClient(path="./chroma_db")
 collection = client.get_or_create_collection(name="character_knowledge_base")
+
 
 def extract_title(passage:str):
     first_title = passage.split("\n",1)[0].strip()
@@ -40,6 +43,7 @@ if collection.count() == 0:
 else:
     print(f"已有 {collection.count()} 条数据，无需重新生成。")
 
+
 def get_recent_question(session:Session, session_id:str,limit:int=3):
     recent = session.exec(
         select(ChatMessage.content).
@@ -47,7 +51,15 @@ def get_recent_question(session:Session, session_id:str,limit:int=3):
         order_by(ChatMessage.created_at.desc()).limit(limit)
     ).all()
     history = list(reversed(recent))
-    return [h for h in history]
+    return history
+
+
+def get_user_memory(session:Session, user_id:str):
+    memories = session.exec(select(UserMemory).where(UserMemory.user_id == user_id)).all()
+    if not memories:
+        return "无"
+    return "\n".join([m.fact_content for m in memories])
+
 
 
 def rewrite_question(question:str, session:Session, session_id:str):
@@ -78,7 +90,7 @@ def search(question: str, top_k: int = 5) -> list[dict]:
     matched = []
 
     if results["documents"] and results["documents"][0]:
-        for i in range(len(results["documents"])):
+        for i in range(len(results["documents"][0])):
             content = results["documents"][0][i]
             title = results["metadatas"][0][i]["title"]
             matched.append({"title":title,"content":content})
@@ -121,24 +133,43 @@ def rerank(question, content_list):
 
     return reranked_docs[:3]
 
+def extract_memory(session:Session, user_id, chat_history):
+    prompt = (
+        "请从下面的对话中提取用户的长期个人信息（如姓名、职业、喜好）。"
+        "如果没有提取到任何信息，请严格只输出一个字：无。不要输出其他任何解释。\n\n"
+        f"对话内容：\n{chat_history}"
+    )
+    reply = ask_deepseek(prompt)
+    if reply and "无" not in reply:
+        content = UserMemory(user_id=user_id, fact_content=reply)
+        session.add(content)
+        session.commit()
+        print(f"提取成功")
+        return content
+    else:
+        print("提取失败")
+        return None
 
-def ask(question: str, session:Session, session_id:str) -> dict:
+
+def ask(question: str, session:Session, session_id:str, user_id:str) -> dict:
 
     new_question = rewrite_question(question, session, session_id)
     matched = search(new_question)
 
-    if not matched:
-        user_msg = ChatMessage(role="user", content=question, session_id=session_id)
-        ai_msg = ChatMessage(role="assistant", content="文档中没有相关内容", session_id=session_id)
-        session.add(user_msg)
-        session.add(ai_msg)
-        session.commit()
-        return {"answer":"文档中没有相关内容","sources":[]}
-
     title = [item["title"] for item in matched]
     context = "\n---\n".join(item["content"] for item in matched)
 
+    chat_history = get_recent_question(session, session_id)
+    chat_history_str = "\n".join([f"用户: {h}" for h in chat_history])
+
+    if not matched:
+        extract_memory(session,user_id,chat_history_str+f"\nuser:{question}")
+        return {"answer":"文档中没有相关内容","sources":[]}
+
+    memory_context = get_user_memory(session,user_id)
+
     prompt = (
+        f"已知用户的背景信息：{memory_context}"
         "你只能根据下面的资料回答问题。"
         "不要扩写，不要联想，不要使用你自己的知识。\n\n"
         f"资料：\n{context}\n\n"
@@ -151,22 +182,32 @@ def ask(question: str, session:Session, session_id:str) -> dict:
     session.add(ai_msg)
     session.commit()
 
+    extract_memory(session, user_id, chat_history_str + f"\nuser:{question}" + f"\nassistant:{reply}")
     return {"answer": reply,'sources':title}
 
 
-
-def ask_stream(question: str, session:Session, session_id:str):
+def ask_stream(question: str, session:Session, session_id:str, user_id:str, background_task:BackgroundTasks):
 
     new_question = rewrite_question(question, session, session_id)
     matched = search(new_question)
+
+    #获取用户的历史问题
+    chat_history = get_recent_question(session,session_id,5)
+    chat_history_str = "\n".join([f"user:{h}" for h in chat_history])
+
     if not matched:
+        extract_memory(session,user_id,chat_history_str+f"\nuser:{question}")
         yield "文档中没有相关内容"
         return
+
+    memory_context = get_user_memory(session,user_id)
+
     content = [c["content"] for c in matched]
     docs = rerank(new_question, content)
     context = "\n---\n".join(item["content"] for item in docs)
 
     prompt = (
+        f"已知用户的背景信息：{memory_context}"
         "你只能根据下面的资料回答问题。"
         "不要扩写，不要联想，不要使用你自己的知识。\n\n"
         f"资料：\n{context}\n\n"
@@ -179,11 +220,15 @@ def ask_stream(question: str, session:Session, session_id:str):
         full_reply += chunk
         yield chunk
 
-    user_msg = ChatMessage(role="user", content=question, session_id=session_id)
-    ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id)
-    session.add(user_msg)
-    session.add(ai_msg)
-    session.commit()
+    def process_after_chat():
+        user_msg = ChatMessage(role="user", content=question, session_id=session_id)
+        ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id)
+        session.add(user_msg)
+        session.add(ai_msg)
+        session.commit()
+        extract_memory(session, user_id, chat_history_str + f"\nuser:{question}" + f"\nassistant:{full_reply}")
+
+    background_task.add_task(process_after_chat)
 
 
 

@@ -14,3 +14,9 @@ class ChatMessage(SQLModel,table=True):
     content:str
     created_at:datetime = Field(index=True,nullable=False,default_factory = lambda:datetime.now(timezone.utc))
     session_id:str = Field(index=True)
+
+class UserMemory(SQLModel,table=True):
+    id:int|None = Field(default=None,primary_key=True)
+    user_id:str = Field(index=True)
+    fact_content:str
+    created_at:datetime = Field(default_factory = lambda:datetime.now(timezone.utc))

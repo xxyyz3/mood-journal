@@ -46,7 +46,7 @@ def chat_history(
 
 @router.post("/stream")
 def chat_stream(
-        # token: Annotated[str, Depends(verify_token)],
+        token: Annotated[str, Depends(verify_token)],
         req: ChatRequest,
         session: Session = Depends(deps.get_session)
 ):
