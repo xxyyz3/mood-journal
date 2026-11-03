@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlmodel
+pymysql
+cryptography
+python-dotenv
+openai
+chromadb
+numpy
+jieba
+requests
+pytest
+pydantic
+alembic
+pypdf
