@@ -1,26 +1,26 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from openai import APITimeoutError, APIError
-from sqlmodel import Session, select
+from sqlmodel import Session
 from fastapi.responses import StreamingResponse
 
 from .. import deps
-from ..deps import verify_token
-from ..models import ChatMessage
+from ..services.service_auth import get_current_user
+from ..models import User
 from ..schemas import ChatRequest, ChatResponse, ChatMessageRead
-from ..services.service_chat import handle_message, handle_message_stream
-
+from ..services.service_chat import get_history, handle_message, handle_message_stream
 
 router = APIRouter(prefix="/chat",tags=["chat"])
 
 @router.post("", response_model=ChatResponse)
 def chat_with_deepseek(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         req: ChatRequest,
         session: Session = Depends(deps.get_session),
 ):
     try:
-        reply = handle_message(session, req.message, req.session_id)
+        # 用户身份以 JWT 为准，不能由请求体决定
+        reply = handle_message(session, req.message, req.session_id, current_user.username)
     except APITimeoutError:
         session.rollback()
         raise HTTPException(status_code=504, detail="响应超时，请稍后尝试")
@@ -33,25 +33,24 @@ def chat_with_deepseek(
 
 @router.get("/history",response_model=list[ChatMessageRead])
 def chat_history(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         session_id:str,
         session: Session = Depends(deps.get_session)
 ):
-    return session.exec(
-        select(ChatMessage).
-        where(ChatMessage.session_id == session_id).
-        order_by(ChatMessage.created_at)
-    ).all()
+    # 只返回当前登录用户自己的消息
+    return get_history(session, session_id, current_user.username)
 
 
 @router.post("/stream")
 def chat_stream(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         req: ChatRequest,
         session: Session = Depends(deps.get_session)
 ):
     def event_generator():
-        yield from handle_message_stream(session, req.message, req.session_id)
+        yield from handle_message_stream(
+            session, req.message, req.session_id, current_user.username
+        )
     return StreamingResponse(event_generator(),media_type="text/event-stream")
 
 

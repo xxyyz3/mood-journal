@@ -7,10 +7,14 @@ from app.prompts import CHAT_SYSTEM_PROMPT
 from ..llm import ask_deepseek_messages, ask_deepseek_messages_stream
 
 
-def messages_histories(session:Session, session_id:str):
+def messages_histories(session:Session, session_id:str, user_id:str|None=None):
+    statement = select(ChatMessage).where(ChatMessage.session_id == session_id)
+    # 传入 user_id 时只取当前用户的消息，防止不同用户复用 session_id 时串会话
+    if user_id is not None:
+        statement = statement.where(ChatMessage.user_id == user_id)
+
     recent = session.exec(
-        select(ChatMessage).
-        where(ChatMessage.session_id == session_id).
+        statement.
         order_by(ChatMessage.created_at.desc()).limit(10)
     ).all()
     history = list(reversed(recent))
@@ -24,10 +28,10 @@ def build_messages(history:list[ChatMessage],user_message:str):
     return messages
 
 
-def handle_message(session:Session, user_message:str,session_id:str):
-    history = messages_histories(session, session_id)
+def handle_message(session:Session, user_message:str,session_id:str, user_id:str|None=None):
+    history = messages_histories(session, session_id, user_id)
     messages = build_messages(history, user_message)
-    user_msg = ChatMessage(role="user", content=user_message, session_id=session_id)
+    user_msg = ChatMessage(role="user", content=user_message, session_id=session_id, user_id=user_id)
     session.add(user_msg)
     try:
         reply = ask_deepseek_messages(messages)
@@ -37,16 +41,16 @@ def handle_message(session:Session, user_message:str,session_id:str):
     except APIError:
         session.rollback()
         raise
-    ai_msg = ChatMessage(role="assistant", content=reply, session_id=session_id)
+    ai_msg = ChatMessage(role="assistant", content=reply, session_id=session_id, user_id=user_id)
     session.add(ai_msg)
     session.commit()
     return reply
 
 
-def handle_message_stream(session:Session, user_message:str,session_id:str):
-    history = messages_histories(session, session_id)
+def handle_message_stream(session:Session, user_message:str,session_id:str, user_id:str|None=None):
+    history = messages_histories(session, session_id, user_id)
     messages = build_messages(history, user_message)
-    user_msg = ChatMessage(role="user", content=user_message, session_id=session_id)
+    user_msg = ChatMessage(role="user", content=user_message, session_id=session_id, user_id=user_id)
     session.add(user_msg)
 
     full_reply = ""
@@ -64,8 +68,20 @@ def handle_message_stream(session:Session, user_message:str,session_id:str):
         session.rollback()
         yield "[API错误]"
         return
-    ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id)
+    ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id, user_id=user_id)
     session.add(ai_msg)
     session.commit()
+
+
+def get_history(session:Session, session_id:str, user_id:str):
+    """查询某个用户自己的会话历史，避免知道 session_id 就能读取别人的消息。"""
+    return session.exec(
+        select(ChatMessage).
+        where(
+            ChatMessage.session_id == session_id,
+            ChatMessage.user_id == user_id,
+        ).
+        order_by(ChatMessage.created_at)
+    ).all()
 
 

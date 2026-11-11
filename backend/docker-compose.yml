@@ -1,0 +1,11 @@
+services:
+  backend:
+    build: .
+    container_name: my-rag
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./chroma_db:/app/chroma_db  # 极其重要：把你本地的向量库挂载进去，防止重启就忘光
+    restart: always                 # 崩溃了自动重启

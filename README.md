@@ -46,13 +46,31 @@ alembic downgrade -1
 - 日志重定向到 `D:\logs\`，配自动切割
 - `pydantic-settings`（了解层面，尚未接入）
 
+## 🐳 Docker 部署（推荐）
+
+本项目已支持 Docker 一键部署，无需在本地配置 Python 和数据库环境。
+
+### 启动命令
+```bash
+docker compose up -d --build
+
 **版本控制**
 - Git + GitHub
 - `git pull --rebase`、`git push`、分支管理
 
 ## 接口
-除 /health 和 /docs 外，所有接口都需要在请求头带：
-Authorization: Bearer <API_TOKEN>
+除 `/health`、`/docs`、`/auth/token` 外，所有接口都需要在请求头带：
+
+```http
+Authorization: Bearer <access_token>
+```
+
+`access_token` 通过 `POST /auth/token`（`application/x-www-form-urlencoded`，字段 `username`、`password`）获取，默认 30 分钟过期。
+
+**Auth**
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | /auth/token | 用户名密码换取 JWT |
 
 **Entries**
 | 方法 | 路径 | 说明 |
@@ -75,7 +93,7 @@ Authorization: Bearer <API_TOKEN>
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | /ask | 基于角色档案的 RAG 问答 |
-
+|POST |/ask/stream| 流式输出|
 
 **Health**
 | 方法 | 路径 | 说明 |
@@ -97,7 +115,7 @@ Authorization: Bearer <API_TOKEN>
 - 新增测试：`test_chat`、`test_chat_history`、`test_timeout`、`test_chat_sessions_isolated`、`test_chat_stream_timeout`、`test_chat_stream_api_error`
 - 新增 `ask` 接口：
 - 数据源：`app/data/character.md`，切分后存入 `app/data/chunks.json`
-
+- 新增基础RAG `app/service/service_rag`
  
 
 **Changed**
@@ -106,7 +124,7 @@ Authorization: Bearer <API_TOKEN>
 - 重构 `/chat`和`/entries`接口，将service部分拆开放到了/services目录下
 - 检索：`jieba 分词 + 命中率 >= 0.6`
 - 无相关内容时不调模型，直接返回固定文案
-
+- 检索：新增了向量数据库
 
 **Fixed**
 - 修复 `/chat/stream` 中捕获异常后数据未回滚的问题
@@ -123,7 +141,8 @@ uvicorn app.main:app --reload
 - DATABASE_URL：MySQL 连接串
 - CORS_ORIGINS：允许的前端来源，逗号分隔
 - DB_ECHO：是否打印 SQL，开发时 true，生产 false
-- API_TOKEN：接口鉴权用的 token
+- SECRET_KEY：JWT 签名密钥，务必换成随机长字符串
+- ALGORITHM：JWT 算法，默认 HS256
 - DEEPSEEK_API_KEY：DeepSeek API key
 - DEEPSEEK_BASE_URL：https://api.deepseek.com
 - DEEPSEEK_MODEL：deepseek-chat

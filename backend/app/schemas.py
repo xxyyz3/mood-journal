@@ -37,6 +37,17 @@ class AskResponse(BaseModel):
     sources:list[str]
 
 class AskRequest(BaseModel):
-    user_id:str
+    # 已废弃：服务端一律以 JWT 中的当前用户为准，此字段仅为兼容旧客户端而保留
+    user_id: str | None = Field(
+        default=None,
+        description="已废弃：服务端以 JWT 当前用户为准，此字段会被忽略",
+    )
     question:str
     session_id:str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None
