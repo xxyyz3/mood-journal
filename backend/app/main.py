@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from .routers import entries, chat, rag
+from .routers import entries, chat, rag, auth
 from .deps import create_db_and_tables
 
 load_dotenv()
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(entries.router)
 app.include_router(chat.router)
 app.include_router(rag.router)
+app.include_router(auth.router)
 create_db_and_tables()
 
 

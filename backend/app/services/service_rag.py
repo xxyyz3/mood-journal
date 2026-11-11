@@ -44,11 +44,17 @@ else:
     print(f"已有 {collection.count()} 条数据，无需重新生成。")
 
 
-def get_recent_question(session:Session, session_id:str,limit:int=3):
+def get_recent_question(session:Session, session_id:str,limit:int=3, user_id:str|None=None):
+    statement = select(ChatMessage.content).where(
+        ChatMessage.session_id == session_id,
+        ChatMessage.role == 'user',
+    )
+    # 只取当前用户自己的历史问题，避免不同用户复用 session_id 时串上下文
+    if user_id is not None:
+        statement = statement.where(ChatMessage.user_id == user_id)
+
     recent = session.exec(
-        select(ChatMessage.content).
-        where(ChatMessage.session_id == session_id,ChatMessage.role == 'user').
-        order_by(ChatMessage.created_at.desc()).limit(limit)
+        statement.order_by(ChatMessage.created_at.desc()).limit(limit)
     ).all()
     history = list(reversed(recent))
     return history
@@ -62,8 +68,8 @@ def get_user_memory(session:Session, user_id:str):
 
 
 
-def rewrite_question(question:str, session:Session, session_id:str):
-    history_questions = get_recent_question(session,session_id,limit=5)
+def rewrite_question(question:str, session:Session, session_id:str, user_id:str|None=None):
+    history_questions = get_recent_question(session,session_id,limit=5,user_id=user_id)
     if not history_questions:
         return question
     history_question = " ".join(history_questions)
@@ -153,13 +159,13 @@ def extract_memory(session:Session, user_id, chat_history):
 
 def ask(question: str, session:Session, session_id:str, user_id:str) -> dict:
 
-    new_question = rewrite_question(question, session, session_id)
+    new_question = rewrite_question(question, session, session_id, user_id)
     matched = search(new_question)
 
     title = [item["title"] for item in matched]
     context = "\n---\n".join(item["content"] for item in matched)
 
-    chat_history = get_recent_question(session, session_id)
+    chat_history = get_recent_question(session, session_id, user_id=user_id)
     chat_history_str = "\n".join([f"用户: {h}" for h in chat_history])
 
     if not matched:
@@ -176,8 +182,8 @@ def ask(question: str, session:Session, session_id:str, user_id:str) -> dict:
         f"问题：{question}"
     )
     reply = ask_deepseek(prompt)
-    user_msg = ChatMessage(role="user",content=question,session_id=session_id)
-    ai_msg = ChatMessage(role="assistant",content=reply,session_id=session_id)
+    user_msg = ChatMessage(role="user",content=question,session_id=session_id,user_id=user_id)
+    ai_msg = ChatMessage(role="assistant",content=reply,session_id=session_id,user_id=user_id)
     session.add(user_msg)
     session.add(ai_msg)
     session.commit()
@@ -188,11 +194,11 @@ def ask(question: str, session:Session, session_id:str, user_id:str) -> dict:
 
 def ask_stream(question: str, session:Session, session_id:str, user_id:str, background_task:BackgroundTasks):
 
-    new_question = rewrite_question(question, session, session_id)
+    new_question = rewrite_question(question, session, session_id, user_id)
     matched = search(new_question)
 
-    #获取用户的历史问题
-    chat_history = get_recent_question(session,session_id,5)
+    #获取用户的历史问题（只查当前用户）
+    chat_history = get_recent_question(session,session_id,5,user_id=user_id)
     chat_history_str = "\n".join([f"user:{h}" for h in chat_history])
 
     if not matched:
@@ -221,8 +227,8 @@ def ask_stream(question: str, session:Session, session_id:str, user_id:str, back
         yield chunk
 
     def process_after_chat():
-        user_msg = ChatMessage(role="user", content=question, session_id=session_id)
-        ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id)
+        user_msg = ChatMessage(role="user", content=question, session_id=session_id, user_id=user_id)
+        ai_msg = ChatMessage(role="assistant", content=full_reply, session_id=session_id, user_id=user_id)
         session.add(user_msg)
         session.add(ai_msg)
         session.commit()

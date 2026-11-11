@@ -1,10 +1,120 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mood Journal · 接口测试台</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">MJ</span>
+      <div>
+        <h1>Mood Journal 接口测试台</h1>
+        <p>用户鉴权 · 聊天流式输出 · RAG 流式问答</p>
+      </div>
+    </div>
+    <span class="pill" id="connPill">未登录</span>
+  </header>
 
+  <main class="layout">
+    <aside class="side">
+      <section class="card">
+        <h2>连接设置</h2>
+
+        <label class="field">
+          <span>后端地址</span>
+          <input id="baseUrl" type="text" spellcheck="false" placeholder="http://127.0.0.1:8000" />
+        </label>
+
+        <div class="row">
+          <button id="healthBtn" class="ghost small">检测连接</button>
+          <button id="saveConnBtn" class="ghost small">保存设置</button>
+        </div>
+        <div id="connStatus" class="status"></div>
+        <p class="hint">
+          所有业务接口统一使用 JWT 鉴权。登录成功后 Token 会自动保存在当前浏览器，
+          聊天与 RAG 请求会自动携带，无需手动填写。Token 默认 30 分钟过期，失效后重新登录即可。
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>用户登录 <code>/auth/token</code></h2>
+
+        <label class="field">
+          <span>用户名</span>
+          <input id="username" type="text" autocomplete="username" placeholder="username" />
+        </label>
+        <label class="field">
+          <span>密码</span>
+          <input id="password" type="password" autocomplete="current-password" placeholder="password" />
+        </label>
+
+        <div class="row">
+          <button id="loginBtn" class="primary">登录并获取 JWT</button>
+          <button id="clearTokenBtn" class="ghost">清除 Token</button>
+        </div>
+
+        <div id="loginStatus" class="status"></div>
+        <pre id="jwtPayload" class="code hidden"></pre>
+      </section>
+    </aside>
+
+    <section class="main">
+      <nav class="tabs">
+        <button class="tab active" data-tab="chat">聊天 · POST /chat/stream</button>
+        <button class="tab" data-tab="rag">关于她 · POST /ask/stream</button>
+      </nav>
+
+      <div class="tab-panel active" id="panel-chat">
+        <div class="toolbar">
+          <label class="inline-field">
+            <span>session_id</span>
+            <input id="chatSession" spellcheck="false" />
+          </label>
+          <button id="chatNewSession" class="ghost small">新会话</button>
+          <button id="chatClear" class="ghost small">清空消息</button>
+        </div>
+
+        <div class="messages" id="chatMessages">
+          <div class="empty">发送一条消息，测试流式聊天。</div>
+        </div>
+
+        <div class="composer">
+          <textarea id="chatInput" rows="1" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+          <button id="chatSend" class="primary">发送</button>
+          <button id="chatStop" class="danger" disabled>停止</button>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-rag">
+        <div class="toolbar">
+          <label class="inline-field">
+            <span>session_id</span>
+            <input id="ragSession" spellcheck="false" />
+          </label>
+          <button id="ragNewSession" class="ghost small">新会话</button>
+          <label class="inline-field">
+            <span>user_id</span>
+            <input id="ragUserId" spellcheck="false" />
+          </label>
+          <button id="ragClear" class="ghost small">清空消息</button>
+        </div>
+
+        <div class="messages" id="ragMessages">
+          <div class="empty">提一个关于“她”的问题，测试 RAG 流式回答。</div>
+        </div>
+
+        <div class="composer">
+          <textarea id="ragInput" rows="1" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+          <button id="ragSend" class="primary">发送</button>
+          <button id="ragStop" class="danger" disabled>停止</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
 </body>
 </html>

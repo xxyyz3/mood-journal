@@ -4,8 +4,8 @@ from openai import APITimeoutError, APIError
 from sqlmodel import Session, select
 
 from .. import deps
-from ..deps import verify_token
-from ..models import MoodEntry
+from ..services.service_auth import get_current_user
+from ..models import MoodEntry, User
 from ..schemas import MoodEntryRead, MoodEntryCreate, SummaryResponse
 from ..services.service_entries import handle_messages, handle_messages_summary
 
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/entries",tags=["entries"] )
 
 @router.get("/summary",response_model=SummaryResponse)
 def entries_summary(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         session: Session = Depends(deps.get_session)
 ):
     try:
@@ -28,7 +28,7 @@ def entries_summary(
 
 @router.get("/stats",summary="Get mood statistics")
 async def read_stats(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         mood:str|None = None,
         session: Session = Depends(deps.get_session)
 ):
@@ -37,7 +37,7 @@ async def read_stats(
 
 @router.post("",response_model=MoodEntryRead)
 async def create_entry(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         entry_in:MoodEntryCreate,
         session: Session = Depends(deps.get_session)
 ):
@@ -49,7 +49,7 @@ async def create_entry(
 
 @router.get("")
 async def read_entries(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         mood:str|None = None,
         session:Session = Depends(deps.get_session)
 ):
@@ -65,7 +65,7 @@ async def read_entries(
 
 @router.get("/{entry_id}",response_model=MoodEntryRead)
 async def read_entry(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         entry_id:int,
         session: Session = Depends(deps.get_session)
 ):
@@ -77,7 +77,7 @@ async def read_entry(
 
 @router.delete("/{entry_id}",status_code=204)
 async def delete_entry(
-        token: Annotated[str, Depends(verify_token)],
+        current_user: Annotated[User, Depends(get_current_user)],
         entry_id:int,
         session: Session = Depends(deps.get_session)
 ):
