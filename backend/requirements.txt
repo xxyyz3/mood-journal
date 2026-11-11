@@ -13,3 +13,9 @@ pytest
 pydantic
 alembic
 pypdf
+pyjwt
+pwdlib
+python-multipart
+email-validator
+pyjwt
+pwdlib[argon2]
